@@ -11,6 +11,7 @@ import time
 import os
 import sys
 import HTMLParser
+import httplib
 
 import BeautifulSoup
 import mechanize
@@ -74,7 +75,8 @@ class NewsCrawler(object):
             page = br.open(url).read()
         except (mechanize.HTTPError,
                 mechanize.URLError,
-                mechanize.BrowserStateError):
+                mechanize.BrowserStateError,
+                httplib.BadStatusLine):
             return None
 
         soup = BeautifulSoup.BeautifulSoup(page)
@@ -88,7 +90,7 @@ class NewsCrawler(object):
                 else:
                     urls.append(a['href'])
 
-        return (title, urls)
+        return (title.strip(), urls)
 
     def crawl(self, n):
         """Crawls the site until n articles have been found."""
@@ -121,7 +123,7 @@ class NewsCrawler(object):
             title, links = title_links
 
             # mark as visited and possibly add to set of articles
-            ctitle = self.cleanup_title(title)
+            ctitle = self.parser.unescape(self.cleanup_title(title))
             url_new.remove(url)
             url_visited.add(url)
             if self.is_article(url):
@@ -151,7 +153,7 @@ class NewsCrawler(object):
 
 
 class NYTimesCrawler(NewsCrawler):
-    URL = "http://www.nytimes.com"
+    URL = "http://www.nytimes.com/"
     url_re = re.compile(r'http://.*nytimes\.com/20[01][0-9]/[0-9]{2}/[0-9]{2}.*')
 
     def is_article(self, url):
@@ -161,7 +163,7 @@ class NYTimesCrawler(NewsCrawler):
         i =  title.rfind(u'-')
         if i > 0:
             title = title[:i].strip()
-        return self.parser.unescape(title)
+        return title
 
     def may_crawl(self, url):
         return 'nytimes.com' in url
@@ -176,21 +178,21 @@ class BBCCrawler(NewsCrawler):
         return x and not url.endswith('default.stm')
 
     def cleanup_title(self, title):
-        return self.parser.unescape(''.join(title.split('-')[1:]).strip())
+        return ''.join(title.split('-')[1:]).strip()
 
     def may_crawl(self, url):
         return 'bbc' in url
 
 
 class HuffPostCrawler(NewsCrawler):
-    URL = "http://www.huffingtonpost.com"
+    URL = "http://www.huffingtonpost.com/"
     url_re = re.compile(r'http://.*\.huffingtonpost\.com/20[01][0-9]/[0-9]{2}/[0-9]{2}.*')
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
 
     def cleanup_title(self, title):
-        return self.parser.unescape(title)
+        return title
 
     def may_crawl(self, url):
         return 'huffington' in url and 'voces' not in url
@@ -205,83 +207,160 @@ class DailyMailCrawler(NewsCrawler):
         return x and not url.endswith("emailArticle.html")
 
     def cleanup_title(self, title):
-        return self.parser.unescape((title + '|').split('|')[0].strip())
+        return (title + '|').split('|')[0].strip()
 
     def may_crawl(self, url):
         return 'dailymail' in url
 
 
-# Crawlers below this point have not been properly tuned yet!!!!
-
-
 class FoxNewsCrawler(NewsCrawler):
     URL = "http://www.foxnews.com/"
-    url_re = re.compile(r'http://.*foxnews\.com/.*/2013/'
-                                r'[0-9]{2}/[0-9]{2}/.*')
+    url_re = re.compile(r'http://.*foxnews\.com/.*/20[01][0-9]/'
+                        r'[0-9]{2}/[0-9]{2}/.*')
 
-    def _is_article(self, url):
+    def is_article(self, url):
         return bool(self.url_re.match(url))
 
-    def _cleanup_title(self, title):
+    def cleanup_title(self, title):
         return (title + '|').split('|')[0].strip()
 
+    def may_crawl(self, url):
+        return 'foxnews' in url and 'video.foxnews' not in url
 
+
+# This one is a bit iffy still
 class CNNCrawler(NewsCrawler):
-    URL = "http://www.cnn.com"
-    url_re = re.compile(r'http://.*\.cnn\.com/[a-zA-Z]*/?2013/[0-9]{2}/[0-9]{2}/.+')
+    URL = "http://www.cnn.com/"
+    url_re = re.compile(r'http://.*\.cnn\.com/[a-zA-Z]*/?'
+                        r'20[01][0-9]/[0-9]{2}/[0-9]{2}/.+')
 
-    def _is_article(self, url):
+    def is_article(self, url):
         return bool(self.url_re.match(url)) and 'comment' not in url
 
-    def _cleanup_title(self, title):
+    def cleanup_title(self, title):
         sep = title.find('&#8211')
         if sep > 0:
             title = title[:sep]
-        return (title + '-').split('-')[0].strip()
+        return (title + ' - ').split(' - ')[0].strip()
+
+    def may_crawl(self, url):
+        return ('cnn' in url and 'TRANSCRIPTS' not in url
+                and 'ac360' not in url and 'cnnmexico' not in url)
 
 
 class WashingtonPostCrawler(NewsCrawler):
-    URL = "http://www.washingtonpost.com"
-    url_re = re.compile(r'http://.*\.washingtonpost\.com/.*/?2013/[0-9]{2}/[0-9]{2}/.*')
+    URL = "http://www.washingtonpost.com/"
+    url_re = re.compile(r'http://.*\.washingtonpost\.com/.*/?'
+                        r'20[01][00-9]/[0-9]{2}/[0-9]{2}/.*')
 
-    def _is_article(self, url):
+    def is_article(self, url):
         return bool(self.url_re.match(url))
 
-    def _cleanup_title(self, title):
+    def cleanup_title(self, title):
         return (title.strip().replace('\n', ' ') + '-').split('-')[0].strip()
+
+    def may_crawl(self, url):
+        return 'washingtonpost' in url
 
 
 class LATimesCrawler(NewsCrawler):
     URL = "http://www.latimes.com/"
-    url_re = re.compile(r'http://www\.latimes\.com/.*2013[0-9]{4}.*story.*')
+    url_re = re.compile(r'http://www\.latimes\.com/.*20[01][0-9]{5}.*story.*')
 
-    def _is_article(self, url):
+    def is_article(self, url):
         return bool(self.url_re.match(url))
 
-    def _cleanup_title(self, title):
-        return (title + '-').split('-')[0].strip()
+    def cleanup_title(self, title):
+        return (title + ' - ').split(' - ')[0].strip()
+
+    def may_crawl(self, url):
+        return 'latimes' in url
 
 
 class ReutersCrawler(NewsCrawler):
     URL = "http://www.reuters.com/"
-    url_re = re.compile(r'http://www.reuters.com/article/2013/[0-9]{2}/[0-9]{2}/.*')
+    url_re = re.compile(r'http://www.reuters.com/article/'
+                        r'20[01][0-9]/[0-9]{2}/[0-9]{2}/.*')
 
-    def _is_article(self, url):
-        x = bool(self.url_re.match(url))
-        return x
+    def is_article(self, url):
+        return bool(self.url_re.match(url))
+
+    def cleanup_title(self, title):
+        return (title.strip() + '\n').split('\n')[0].strip()
+
+    def may_crawl(self, url):
+        return 'reuters' in url and '/video/' not in url
 
 
-crawlers = [FoxNewsCrawler(),
-            NYTimesCrawler(),
+class WallStreetJournalCrawler(NewsCrawler):
+    URL = "http://online.wsj.com/"
+    url_re = re.compile(r'http://(www|online).wsj.com/(news/)?articles?/.*')
+
+    def is_article(self, url):
+        return bool(self.url_re.match(url))
+
+    def cleanup_title(self, title):
+        return (title.strip() + ' - ').split(' - ')[0].strip()
+
+    def may_crawl(self, url):
+        return 'wsj.com' in url
+
+
+class USATodayCrawler(NewsCrawler):
+    URL = "http://www.usatoday.com/"
+    url_re = re.compile(r'http://www.usatoday.com/story/.*')
+
+    def is_article(self, url):
+        return bool(self.url_re.match(url))
+
+    def cleanup_title(self, title):
+        return title
+
+    def may_crawl(self, url):
+        return 'usatoday' in url
+
+
+class DailyNewsCrawler(NewsCrawler):
+    URL = "http://www.nydailynews.com/"
+    url_re = re.compile(r'http://www.nydailynews.com/.*-article-.*')
+
+    def is_article(self, url):
+        return bool(self.url_re.match(url))
+
+    def cleanup_title(self, title):
+        return (title.strip() + ' - ').split(' - ')[0].strip()
+
+    def may_crawl(self, url):
+        return 'nydailynews' in url
+
+
+class NewYorkPostCrawler(NewsCrawler):
+    URL = "http://nypost.com/"
+    url_re = re.compile(r'http://nypost.com/20[01][0-9]/[0-9]{2}/[0-9]{2}/.*/$')
+
+    def is_article(self, url):
+        return bool(self.url_re.match(url))
+
+    def cleanup_title(self, title):
+        return (title.strip() + '|').split('|')[0].strip()
+
+    def may_crawl(self, url):
+        return 'nypost.com' in url
+
+
+crawlers = [NYTimesCrawler(),
+            BBCCrawler(),
+            HuffPostCrawler(),
+            DailyMailCrawler(),
+            FoxNewsCrawler(),
             CNNCrawler(),
             WashingtonPostCrawler(),
             LATimesCrawler(),
-            DailyMailCrawler(),
-            #ReutersCrawler(),
-            #HuffPostCrawler(),
-            BBCCrawler()]
-
-crawlers = [DailyMailCrawler()]
+            ReutersCrawler(),
+            WallStreetJournalCrawler(),
+            USATodayCrawler(),
+            DailyNewsCrawler(),
+            NewYorkPostCrawler()]
 
 
 def main():
