@@ -12,13 +12,14 @@ import os
 import sys
 import HTMLParser
 import httplib
+import threading
 
 import BeautifulSoup
 import mechanize
 
-
-ARTICLE_COUNT = 30
-SAMPLE_SIZE = 25
+ARTICLE_COUNT = 2000
+VERBOSE = False
+THREADS = 8
 
 sys.setrecursionlimit(10000)
 
@@ -89,7 +90,8 @@ class NewsCrawler(object):
                     urls.append(self.URL + a['href'][1:])
                 else:
                     urls.append(a['href'])
-
+        if not title.strip:
+            return None
         return (title.strip(), urls)
 
     def crawl(self, n):
@@ -116,7 +118,7 @@ class NewsCrawler(object):
             # fetch a random URL
             url = random.choice(tuple(url_new))
             title_links = self._fetch(url)
-            if title_links is None:
+            if title_links is None or not self.may_crawl(url):
                 url_new.remove(url)
                 url_visited.add(url)
                 continue
@@ -128,11 +130,13 @@ class NewsCrawler(object):
             url_visited.add(url)
             if self.is_article(url):
                 articles.setdefault(ctitle, []).append((title, url))
-            print '-' * 30
-            print ctitle
-            print title
-            print url
-            print self.is_article(url)
+
+            if VERBOSE:
+                print '-' * 30
+                print ctitle
+                print title
+                print url
+                print self.is_article(url)
 
             # pull out all relevant links at them to the todo
             for l in links:
@@ -140,14 +144,14 @@ class NewsCrawler(object):
                     url_new.add(l)
 
             # periodic state sync
-            if len(url_visited) % 10 == 9:
+            if len(url_visited) % 100 == 9:
                 self._sync_state()
 
-        print ("Crawled %s, %d new, %d old, %d articles" %
-               (self.__class__.__name__,
-                len(url_new),
-                len(url_visited),
-                len(articles)))
+                print ("Crawled %s, %d new, %d old, %d articles" %
+                       (self.__class__.__name__,
+                        len(url_new),
+                        len(url_visited),
+                        len(articles)))
 
         self._sync_state()
 
@@ -181,7 +185,22 @@ class BBCCrawler(NewsCrawler):
         return ''.join(title.split('-')[1:]).strip()
 
     def may_crawl(self, url):
-        return 'bbc' in url
+        return ('bbc' in url and
+                'shop.bbc' not in url and
+                'stumbleupon' not in url and
+                'google.com' not in url and
+                'linkedin' not in url and
+                'twitter.com' not in url and
+                'facebook.com' not in url and
+                'digg.com' not in url and
+                '/programmes/' not in url and
+                'reddit.com' not in url and
+                '/cbeebies/' not in url and
+                'ssl.bbc' not in url and
+                '/comments/' not in url and
+                '/sport/' not in url and
+                '/music/' not in url and
+                'downloads.bbc' not in url)
 
 
 class HuffPostCrawler(NewsCrawler):
@@ -308,7 +327,7 @@ class WallStreetJournalCrawler(NewsCrawler):
 
 class USATodayCrawler(NewsCrawler):
     URL = "http://www.usatoday.com/"
-    url_re = re.compile(r'http://www.usatoday.com/story/.*')
+    url_re = re.compile(r'http://www.usatoday.com/(.*/)?story/.*')
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -317,7 +336,14 @@ class USATodayCrawler(NewsCrawler):
         return title
 
     def may_crawl(self, url):
-        return 'usatoday' in url
+        return ('usatoday.com' in url and
+                'mediagallery' not in url and
+                'sportsdata' not in url and
+                'sportspolls' not in url and
+                '/tag/' not in url and
+                '/salaries/' not in url and
+                '/statistics/' not in url and
+                '/event/' not in url)
 
 
 class DailyNewsCrawler(NewsCrawler):
@@ -364,8 +390,22 @@ crawlers = [NYTimesCrawler(),
 
 
 def main():
+    active = []
     for c in crawlers:
-        c.crawl(ARTICLE_COUNT)
+        # c.crawl(ARTICLE_COUNT)
+        # continue
+        while len(active) >= THREADS:
+            for i in range(len(active)):
+                active[i].join(1.0)
+                if not active[i].isAlive():
+                    active.pop(i)
+                    break
+
+        t = threading.Thread(target=c.crawl, args=(ARTICLE_COUNT,),
+                             name=c.__class__.__name__)
+        t.start()
+        active.append(t)
+
     return 0
 
 if __name__ == "__main__":
