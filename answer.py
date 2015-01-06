@@ -8,6 +8,8 @@ import re
 import random
 import cPickle
 
+import matplotlib.pyplot as plt
+
 
 SAMPLE_SIZE = 100
 
@@ -72,13 +74,33 @@ def main():
                     break
 
             if c in ('y', 'n', 'm', 'p'):
-                hline['answer'] = c.lower()
+                hline['answer'] = {'y': 'yes',
+                                   'n': 'no',
+                                   'm': 'maybe',
+                                   'p': 'non-polar'}[c.lower()]
             if c.lower() in ('q', ''):
                 break
     finally:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, stdin_attrs)
 
     write_sample(sample)
+
+    answered = [hline for hline in sample if 'answer' in hline]
+    count = {}
+    for hline in answered:
+        count[hline['answer']] = count.get(hline['answer'], 0) + 1
+
+    labels = ['yes', 'no', 'maybe', 'non-polar']
+    values = [count[l] for l in labels]
+    colors = ['#99ff33', '#ff3333', '#ff9933', '#9999ff']
+
+    plt.pie(values, labels=labels, colors=colors,
+            autopct='%1.0f%%', shadow=False, startangle=90)
+    plt.axis('equal')
+    fname = 'betteridge_answer_all.png'
+    print "Writing", fname
+    plt.savefig(fname, bbox_inches='tight')
+
 
 if __name__ == "__main__":
     sys.exit(main())
