@@ -43,7 +43,8 @@ class NewsCrawler(object):
     def __init__(self):
         self.state = {'url_visited': set(),
                       'url_new': set([self.URL]),
-                      'articles': {}}
+                      'articles': {},
+                      'source': self.name}
         self.fname = "state_%s.pkl" % self.__class__.__name__
         if os.path.exists(self.fname):
             self.state = cPickle.load(open(self.fname))
@@ -159,6 +160,7 @@ class NewsCrawler(object):
 class NYTimesCrawler(NewsCrawler):
     URL = "http://www.nytimes.com/"
     url_re = re.compile(r'http://.*nytimes\.com/20[01][0-9]/[0-9]{2}/[0-9]{2}.*')
+    name = 'NYTimes'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -176,6 +178,7 @@ class NYTimesCrawler(NewsCrawler):
 class BBCCrawler(NewsCrawler):
     URL = "http://www.bbc.com/"
     url_re = re.compile(r'http://www\.bbc\.(com|co\.uk)/news/.*[0-9]+')
+    name = 'BBC'
 
     def is_article(self, url):
         x = bool(self.url_re.match(url))
@@ -206,6 +209,7 @@ class BBCCrawler(NewsCrawler):
 class HuffPostCrawler(NewsCrawler):
     URL = "http://www.huffingtonpost.com/"
     url_re = re.compile(r'http://.*\.huffingtonpost\.com/20[01][0-9]/[0-9]{2}/[0-9]{2}.*')
+    name = 'HuffPost'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -220,6 +224,7 @@ class HuffPostCrawler(NewsCrawler):
 class DailyMailCrawler(NewsCrawler):
     URL = "http://www.dailymail.co.uk/"
     url_re = re.compile(r'http://www\.dailymail\.co\.uk/.*article-[0-9]{7}/.*\.html')
+    name = 'DailyMail'
 
     def is_article(self, url):
         x = bool(self.url_re.match(url))
@@ -236,6 +241,7 @@ class FoxNewsCrawler(NewsCrawler):
     URL = "http://www.foxnews.com/"
     url_re = re.compile(r'http://.*foxnews\.com/.*/20[01][0-9]/'
                         r'[0-9]{2}/[0-9]{2}/.*')
+    name = 'FoxNews'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -252,6 +258,7 @@ class CNNCrawler(NewsCrawler):
     URL = "http://www.cnn.com/"
     url_re = re.compile(r'http://.*\.cnn\.com/[a-zA-Z]*/?'
                         r'20[01][0-9]/[0-9]{2}/[0-9]{2}/.+')
+    name = 'CNN'
 
     def is_article(self, url):
         return bool(self.url_re.match(url)) and 'comment' not in url
@@ -271,6 +278,7 @@ class WashingtonPostCrawler(NewsCrawler):
     URL = "http://www.washingtonpost.com/"
     url_re = re.compile(r'http://.*\.washingtonpost\.com/.*/?'
                         r'20[01][00-9]/[0-9]{2}/[0-9]{2}/.*')
+    name = 'WashingtonPost'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -285,6 +293,7 @@ class WashingtonPostCrawler(NewsCrawler):
 class LATimesCrawler(NewsCrawler):
     URL = "http://www.latimes.com/"
     url_re = re.compile(r'http://www\.latimes\.com/.*20[01][0-9]{5}.*story.*')
+    name = 'LATimes'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -300,6 +309,7 @@ class ReutersCrawler(NewsCrawler):
     URL = "http://www.reuters.com/"
     url_re = re.compile(r'http://www.reuters.com/article/'
                         r'20[01][0-9]/[0-9]{2}/[0-9]{2}/.*')
+    name = 'Reuters'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -314,6 +324,7 @@ class ReutersCrawler(NewsCrawler):
 class WallStreetJournalCrawler(NewsCrawler):
     URL = "http://online.wsj.com/"
     url_re = re.compile(r'http://(www|online).wsj.com/(news/)?articles?/.*')
+    name = 'WallStreetJournal'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -328,6 +339,7 @@ class WallStreetJournalCrawler(NewsCrawler):
 class USATodayCrawler(NewsCrawler):
     URL = "http://www.usatoday.com/"
     url_re = re.compile(r'http://www.usatoday.com/(.*/)?story/.*')
+    name = 'USAToday'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -349,6 +361,7 @@ class USATodayCrawler(NewsCrawler):
 class DailyNewsCrawler(NewsCrawler):
     URL = "http://www.nydailynews.com/"
     url_re = re.compile(r'http://www.nydailynews.com/.*-article-.*')
+    name = 'NYDailyNews'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
@@ -363,6 +376,7 @@ class DailyNewsCrawler(NewsCrawler):
 class NewYorkPostCrawler(NewsCrawler):
     URL = "http://nypost.com/"
     url_re = re.compile(r'http://nypost.com/20[01][0-9]/[0-9]{2}/[0-9]{2}/.*/$')
+    name = 'NewYorkPost'
 
     def is_article(self, url):
         return bool(self.url_re.match(url))
