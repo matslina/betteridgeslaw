@@ -179,13 +179,13 @@ def main():
              ['non-polar', 'maybe', 'no', 'yes'],
              colormap=colors)
 
-    polar = [hline for hline in answered
-             if hline['answer'] in ('yes', 'no', 'maybe')]
-
     # stacked bar chart of yes/no/maybe/non-polar per source
-    stackbar(polar, 'betteridge_answer_stack.png',
+    stackbar(answered, 'betteridge_answer_stack.png',
              ['non-polar', 'maybe', 'no', 'yes'],
              colormap=colors)
+
+    polar = [hline for hline in answered
+             if hline['answer'] in ('yes', 'no', 'maybe')]
 
     # stacked bar chart of yes/no/maybe ratio per source
     stackbar(polar, 'betteridge_polar_stack.png',
