@@ -66,13 +66,15 @@ def askloop(questions):
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, stdin_attrs)
 
 
-def piechart(hlines, fname, labels, labelmap={}, colormap={}):
+def piechart(hlines, fname, labels, labelmap={}, colormap={}, title=None):
     count = {}
     for hline in hlines:
         a = labelmap.get(hline['answer'], hline['answer'])
         count[a] = count.get(a, 0) + 1
 
     plt.clf()
+    if title:
+        plt.suptitle(title)
     plt.pie([count[l] for l in labels],
             labels=labels, colors=[colormap[l] for l in labels],
             autopct='%1.0f%%', startangle=90)
@@ -164,7 +166,8 @@ def main():
              labelmap={'yes': 'polar',
                        'no': 'polar',
                        'maybe': 'polar'},
-             colormap=colors)
+             colormap=colors,
+             title='polarity of headlines phrased as questions')
 
     # stacked bar chart of polar/non-polar per source
     stackbar(answered, 'betteridge_polarity_stack.png',
@@ -172,17 +175,20 @@ def main():
              labelmap={'yes': 'polar',
                        'no': 'polar',
                        'maybe': 'polar'},
-             colormap=colors)
+             colormap=colors,
+             title='polarity of headlines phreased as questions, per source')
 
     # pie chart of yes/no/maybe/non-polar
     piechart(answered, 'betteridge_answer_pie.png',
              ['non-polar', 'maybe', 'no', 'yes'],
-             colormap=colors)
+             colormap=colors,
+             title='answers to headlines phrased as questions')
 
     # stacked bar chart of yes/no/maybe/non-polar per source
     stackbar(answered, 'betteridge_answer_stack.png',
              ['non-polar', 'maybe', 'no', 'yes'],
-             colormap=colors)
+             colormap=colors,
+             title='answers to headlines phrased as questions, per source')
 
     polar = [hline for hline in answered
              if hline['answer'] in ('yes', 'no', 'maybe')]
