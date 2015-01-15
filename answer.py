@@ -45,8 +45,9 @@ def askloop(questions):
     try:
         tty.setcbreak(sys.stdin.fileno())
 
-        for hline in questions:
-
+        i = 0
+        while i < len(questions):
+            hline = questions[i]
             print options, hline['title']
 
             c = None
@@ -60,8 +61,12 @@ def askloop(questions):
                                    'n': 'no',
                                    'm': 'maybe',
                                    'p': 'non-polar'}[c.lower()]
+            elif c == 'k':
+                i -= 2
             if c.lower() in ('q', ''):
                 break
+
+            i += 1
     finally:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, stdin_attrs)
 
@@ -144,7 +149,9 @@ def main():
         s = hline['source']
         questions_per_source[s] = questions_per_source.get(s, 0) + 1
 
-    unanswered = [hline for hline in questions if 'answer' not in hline]
+    redo = sys.argv[1:]
+    unanswered = [hline for hline in questions
+                  if 'answer' not in hline or hline['answer'] in redo]
 
     print "%d of %d questions unanswered" % (len(unanswered), len(questions))
 
