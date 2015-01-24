@@ -165,7 +165,18 @@ def main():
               'polar': '#aaaaff',
               'non-polar': '#ffaa44',
               'yes': '#99ff33',
-              'no': '#ff4444'}
+              'no': '#ff4444',
+              '': '#ffaa44'}
+
+    # stacked bar chart of questions per source
+    stackbar(answered, 'betteridge_numbers_stack.png',
+             [''],
+             labelmap={'yes': '',
+                       'no': '',
+                       'maybe': '',
+                       'non-polar': ''},
+             colormap=colors,
+             title='number of headlines phrased as questions, per source')
 
     # pie chart of polar/non-polar
     piechart(answered, 'betteridge_polarity_pie.png',
