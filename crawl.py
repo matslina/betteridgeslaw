@@ -102,6 +102,25 @@ class NewsCrawler(object):
         url_visited = self.state['url_visited']
         articles = self.state['articles']
 
+        # retroactively apply article filter in case it has changed
+        numrem_art, numrem_url = 0, 0
+        for ctitle in articles:
+            remove = []
+            for i, (_, url) in enumerate(articles[ctitle]):
+                if not self.is_article(url):
+                    remove.append(i)
+                    url_visited.add(url)
+            for i in reversed(remove):
+                url_visited.add(articles[ctitle].pop(i)[1])
+                numrem_url += 1
+        for ctitle in articles.keys():
+            if not articles[ctitle]:
+                articles.pop(ctitle)
+                numrem_art += 1
+        if numrem_url:
+            print ("Removed %d urls and %d articles from %s" %
+                   (numrem_url, numrem_art, self.__class__.__name__))
+
         if len(articles) >= n:
             return
 
@@ -163,7 +182,7 @@ class NYTimesCrawler(NewsCrawler):
     name = 'NYTimes'
 
     def is_article(self, url):
-        return bool(self.url_re.match(url))
+        return bool(self.url_re.match(url)) and '.blogs.' not in url
 
     def cleanup_title(self, title):
         i =  title.rfind(u'-')
@@ -182,7 +201,7 @@ class BBCCrawler(NewsCrawler):
 
     def is_article(self, url):
         x = bool(self.url_re.match(url))
-        return x and not url.endswith('default.stm')
+        return x and not url.endswith('default.stm') and '/blogs-' not in url
 
     def cleanup_title(self, title):
         return ''.join(title.split('-')[1:]).strip()
@@ -244,7 +263,7 @@ class FoxNewsCrawler(NewsCrawler):
     name = 'FoxNews'
 
     def is_article(self, url):
-        return bool(self.url_re.match(url))
+        return bool(self.url_re.match(url)) and '/blog/' not in url
 
     def cleanup_title(self, title):
         return (title + '|').split('|')[0].strip()
@@ -261,7 +280,9 @@ class CNNCrawler(NewsCrawler):
     name = 'CNN'
 
     def is_article(self, url):
-        return bool(self.url_re.match(url)) and 'comment' not in url
+        return (bool(self.url_re.match(url)) and
+                'comment' not in url and
+                '.blogs.' not in url)
 
     def cleanup_title(self, title):
         sep = title.find('&#8211')
@@ -281,7 +302,7 @@ class WashingtonPostCrawler(NewsCrawler):
     name = 'WashingtonPost'
 
     def is_article(self, url):
-        return bool(self.url_re.match(url))
+        return bool(self.url_re.match(url)) and '/blogs/' not in url
 
     def cleanup_title(self, title):
         return (title.strip().replace('\n', ' ') + '-').split('-')[0].strip()
