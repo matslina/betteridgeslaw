@@ -136,18 +136,8 @@ def stackbar(hlines, fname, labels,
 def main():
     headlines = load_headlines()
 
-    total_per_source = {}
-    for hline in headlines:
-        s = hline['source']
-        total_per_source[s] = total_per_source.get(s, 0) + 1
-
     questions = [hline for hline in headlines if hline['title'].endswith('?')]
     random.shuffle(questions)
-
-    questions_per_source = {}
-    for hline in headlines:
-        s = hline['source']
-        questions_per_source[s] = questions_per_source.get(s, 0) + 1
 
     redo = sys.argv[1:]
     unanswered = [hline for hline in questions
