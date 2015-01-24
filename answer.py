@@ -13,19 +13,29 @@ import matplotlib.pyplot as plt
 
 
 def load_headlines():
+    old = []
     if os.path.exists('headlines.pkl'):
-        return cPickle.load(open('headlines.pkl'))
+        old = cPickle.load(open('headlines.pkl'))
 
-    headlines = []
-
+    current = []
     for f in os.listdir('.'):
         if not re.match(r'state_.*Crawler.pkl$', f):
             continue
         print "Loading", f
         state = cPickle.load(open(f))
         for title in state['articles']:
-            headlines.append({'title': title,
-                              'source': state['source']})
+            if title.endswith('?'):
+                current.append({'title': title,
+                                'source': state['source']})
+
+    old_titles = set([h['title'] for h in old])
+    current_titles = set([h['title'] for h in current])
+
+    headlines = [h for h in old if h['title'] in current_titles]
+    headlines.extend([h for h in current if h['title'] not in old_titles])
+
+    print ("Loaded %d headlines, %d old, %d current" %
+           (len(headlines), len(old), len(current)))
 
     return headlines
 
@@ -134,9 +144,8 @@ def stackbar(hlines, fname, labels,
 
 
 def main():
-    headlines = load_headlines()
+    questions = load_headlines()
 
-    questions = [hline for hline in headlines if hline['title'].endswith('?')]
     random.shuffle(questions)
 
     redo = sys.argv[1:]
