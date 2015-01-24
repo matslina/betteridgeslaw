@@ -217,6 +217,14 @@ def main():
              colormap=colors, ratio=True,
              title='ratio of answers to polar headlines')
 
+    # dump the data as text files
+    with open('answers.txt', 'w') as f:
+        for a in ('yes', 'no', 'maybe', 'non-polar'):
+            f.write('%s %s\n' % ('=' * len(a), a.upper()))
+            for hline in answered:
+                if hline['answer'] == a:
+                    f.write('%s (%s)\n' % (hline['title'], hline['source']))
+            f.write('\n')
 
 
 if __name__ == "__main__":
