@@ -194,7 +194,7 @@ def main():
                        'no': 'polar',
                        'maybe': 'polar'},
              colormap=colors,
-             title='polarity of headlines phreased as questions, per source')
+             title='polarity of headlines phrased as questions, per source')
 
     # pie chart of yes/no/maybe/non-polar
     piechart(answered, 'betteridge_answer_pie.png',
